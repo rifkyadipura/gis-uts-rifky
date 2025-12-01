@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    environment:
+      MONGO_URI: "mongodb://mongo:27017"
+      MONGO_DB: "gisdb"
+      MONGO_COLLECTION: "features"
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend:/app
+
+volumes:
+  mongo_data:

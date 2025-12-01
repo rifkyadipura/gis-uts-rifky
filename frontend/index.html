@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>GIS UTS Rifky — Blue Modern</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <style>
+    :root{
+      --blue:#1E88E5;
+      --blue-soft:#E8F3FF;
+      --muted:#6b7280;
+      --bg:#f6f9fc;
+      --card:#ffffff;
+      --accent:#0b63c6;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:#0b1724}
+    .topbar{
+      height:64px; display:flex; align-items:center; gap:12px; padding:0 16px;
+      background: linear-gradient(90deg,var(--blue),#1976d2);
+      color:white; box-shadow: 0 4px 14px rgba(11,22,36,0.08); position:relative; z-index:14000;
+    }
+    .brand { font-weight:600; font-size:18px; letter-spacing:0.2px; display:flex; gap:10px; align-items:center }
+    .brand .logo{
+      width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,0.12);
+      display:flex; align-items:center; justify-content:center; font-weight:700;
+    }
+    .top-controls{ margin-left:16px; display:flex; gap:8px; }
+    .btn{
+      background:linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+      color:white; border:1px solid rgba(255,255,255,0.12);
+      padding:8px 14px; border-radius:999px; cursor:pointer;
+      font-weight:600; font-size:13px;
+    }
+    .btn.secondary{ background:white; color:var(--blue); border:1px solid #cdd8e3 }
+    .top-right { margin-left:auto; font-size:13px; }
+    .layout { display:flex; height: calc(100vh - 64px); }
+    .sidebar{
+      width:340px; background:linear-gradient(180deg,#ffffff,#fdfdff);
+      border-right:1px solid rgba(11,22,36,0.06);
+      padding:14px; transition:.3s; box-shadow:2px 0 14px rgba(11,22,36,0.05);
+      overflow:auto;
+    }
+    .sidebar.collapsed{ width:0; padding:0; overflow:hidden; }
+    .sidebar .title{ font-weight:600; margin-bottom:10px; }
+    .section{
+      background:var(--card); padding:12px; border-radius:10px;
+      margin-bottom:12px; box-shadow:0 2px 10px rgba(11,22,36,0.05);
+    }
+    .small{ color:var(--muted); font-size:13px }
+    #map{ flex:1; min-height:400px; }
+
+    /* Data preview list */
+    #preview-search { width:100%; padding:8px; border-radius:8px; border:1px solid #e3e8ef; margin-bottom:8px; }
+    .list-item { padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:8px; align-items:flex-start; border:1px solid rgba(11,22,36,0.03); background:white; margin-bottom:8px; }
+    .list-item .meta { font-size:13px; color:#1b2430; }
+    .list-item .desc { font-size:12px; color:var(--muted); margin-top:4px; }
+    .list-actions { display:flex; gap:6px; align-items:center; }
+    .icon-sm { padding:6px 8px; border-radius:8px; background:var(--blue-soft); color:var(--accent); border:1px solid rgba(11,22,36,0.04); cursor:pointer; font-weight:600; }
+
+    /* modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(3,7,18,0.32); z-index:18000; display:flex; align-items:center; justify-content:center; }
+    .modal-box{ background:white; min-width:420px; padding:18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15) }
+    .modal-box pre { white-space:pre-wrap; word-break:break-word; font-size:13px; color:#1f2937; }
+
+    /* toast/spinner */
+    #toast { position: fixed; right:20px; bottom:20px; display:flex; flex-direction:column; gap:8px; z-index:20000; }
+    .toast{ background:#05223b; color:white; padding:10px 14px; border-radius:8px; box-shadow:0 6px 20px rgba(7,18,34,.24); }
+    #spinnerOverlay{ position:fixed; inset:0; background:rgba(255,255,255,0.6); display:none; align-items:center; justify-content:center; z-index:20000; }
+    .spinner{ width:48px; height:48px; border:6px solid #e2e8f0; border-top:6px solid var(--blue); border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+
+    /* small popup add button style */
+    .popup-add-btn {
+      display:inline-block;padding:6px 10px;background:var(--blue);color:white;border-radius:8px;margin-top:6px;cursor:pointer;font-weight:700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="brand"><div class="logo">GIS</div>UTS Rifky — Blue Modern</div>
+    <div class="top-controls">
+      <button id="toggle-sidebar" class="btn">☰</button>
+      <button id="btn-refresh" class="btn">Refresh</button>
+      <button id="btn-permalink" class="btn">Copy Permalink</button>
+      <button id="btn-export" class="btn">Export GeoJSON</button>
+      <label class="btn secondary" style="cursor:pointer;">
+        Import GeoJSON <input id="import-file" type="file" accept=".json,.geojson" style="display:none">
+      </label>
+    </div>
+    <!-- <div class="top-right">API: <span id="api-url">http://localhost:3000</span></div> -->
+  </div>
+
+  <div class="layout">
+    <aside id="sidebar" class="sidebar">
+      <div class="title">Controls</div>
+
+      <div class="section">
+        <div class="small">Layer & Tools</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="btn-zoom-fit" class="btn secondary" style="color:var(--blue);">Fit</button>
+          <button id="btn-toggle-cluster" class="btn secondary" style="color:var(--blue);">Cluster</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="small">Info</div>
+        <div style="margin-top:8px; font-size:13px;">
+          Klik ikon draw (kiri peta) untuk menggambar. Klik peta untuk lihat lokasi dan tambah feature.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="small">Data Preview</div>
+        <input id="preview-search" placeholder="Cari nama atau deskripsi..." />
+        <div id="data-count" style="margin-top:8px;font-weight:600;">Loading...</div>
+        <div id="preview-list" style="margin-top:10px"></div>
+      </div>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <div id="toast"></div>
+  <div id="spinnerOverlay"><div class="spinner"></div></div>
+
+  <script>
+    (function(){
+      const q = new URLSearchParams(window.location.search).get("api");
+      window.API_BASE = q || "http://localhost:3000";
+      document.getElementById("api-url").textContent = window.API_BASE;
+    })();
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
