@@ -20,6 +20,7 @@
       --accent:#0b63c6;
       font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto;
     }
+
     html,body{height:100%; margin:0; background:var(--bg); color:#0b1724}
     .topbar{
       height:64px; display:flex; align-items:center; gap:12px; padding:0 16px;
@@ -54,7 +55,7 @@
       margin-bottom:12px; box-shadow:0 2px 10px rgba(11,22,36,0.05);
     }
     .small{ color:var(--muted); font-size:13px }
-    #map{ flex:1; min-height:400px; }
+    #map{ flex:1; min-height:400px }
 
     /* Data preview list */
     #preview-search { width:100%; padding:8px; border-radius:8px; border:1px solid #e3e8ef; margin-bottom:8px; }
@@ -64,10 +65,105 @@
     .list-actions { display:flex; gap:6px; align-items:center; }
     .icon-sm { padding:6px 8px; border-radius:8px; background:var(--blue-soft); color:var(--accent); border:1px solid rgba(11,22,36,0.04); cursor:pointer; font-weight:600; }
 
-    /* modal */
-    .modal-overlay { position:fixed; inset:0; background:rgba(3,7,18,0.32); z-index:18000; display:flex; align-items:center; justify-content:center; }
-    .modal-box{ background:white; min-width:420px; padding:18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15) }
-    .modal-box pre { white-space:pre-wrap; word-break:break-word; font-size:13px; color:#1f2937; }
+    /* modal (improved) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3,7,18,0.36);
+      z-index: 18000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-box {
+      background: white;
+      width: 100%;
+      max-width: 560px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      padding: 18px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    .modal-box .modal-title {
+      font-weight: 700;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .modal-box form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-box input[type="text"],
+    .modal-box textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #e3e8ef;
+      font-size: 14px;
+      color: #0b1724;
+      background: #fff;
+      resize: vertical;
+    }
+
+    .modal-box textarea { min-height: 120px; }
+
+    .modal-box .modal-actions {
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      margin-top:6px;
+    }
+
+    .modal-box .btn {
+      background: linear-gradient(180deg,#f7fbff,#eff7ff);
+      color: var(--blue);
+      border: 1px solid rgba(11,22,36,0.06);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .modal-box .btn.secondary {
+      background: white;
+      color: var(--muted);
+      border: 1px solid #e6eef8;
+    }
+
+    .modal-box input:focus, .modal-box textarea:focus, .modal-box button:focus {
+      outline: 3px solid rgba(30,136,229,0.12);
+      outline-offset: 2px;
+    }
+
+    /* Inline popup buttons (for Leaflet popup / inline edit) */
+    .btn-inline-action {
+      background: linear-gradient(180deg, #1E88E5, #1976d2);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-inline-secondary {
+      background: white;
+      color: var(--blue);
+      border: 1px solid #cdd8e3;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
 
     /* toast/spinner */
     #toast { position: fixed; right:20px; bottom:20px; display:flex; flex-direction:column; gap:8px; z-index:20000; }
@@ -95,7 +191,7 @@
         Import GeoJSON <input id="import-file" type="file" accept=".json,.geojson" style="display:none">
       </label>
     </div>
-    <!-- <div class="top-right">API: <span id="api-url">http://localhost:3000</span></div> -->
+    <!-- optional debug: <div class="top-right">API: <span id="api-url">http://localhost:3000</span></div> -->
   </div>
 
   <div class="layout">
@@ -134,8 +230,9 @@
   <script>
     (function(){
       const q = new URLSearchParams(window.location.search).get("api");
-      window.API_BASE = q || "http://localhost:3000";
-      document.getElementById("api-url").textContent = window.API_BASE;
+      // default to production Railway domain, allow override via ?api=
+      window.API_BASE = q || "https://backend-gis-uts-rifky-production.up.railway.app";
+      try { document.getElementById("api-url").textContent = window.API_BASE; } catch(e){}
     })();
   </script>
 
